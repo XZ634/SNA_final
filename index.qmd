@@ -957,7 +957,7 @@ To investigate how this ideological diffusion took place and how it shaped the n
 
 Finally, this study examines the post–civil war trajectories of writers: whether they remained on the mainland or relocated to Taiwan? As well as the factors associated with political persecution among those who stayed on the mainland. None of the writers who left the mainland were leftist, while those who stayed included both leftist and non-leftist writers. Among those who stayed, all non-leftist writers suffered political persecution, while only two leftist writers—Mao Dun and Guo Moruo—escaped persecution. What they had in common was that both had joined the Chinese Communist Party at an early stage (1920s), accumulating long-standing revolutionary credentials.
 
-### 6.2 Discussion
+### 6.2 Contributions
 
 This study makes a novel contribution by employing newspaper co-occurrence data to analyze the social networks among Republican-era Chinese writers, advancing both the data resources and research methods used in the study of modern Chinese literary history. In addition, the findings offer valuable insights into the dynamics of social relationships among Republican-era writers, particularly regarding how the spread of leftist ideology shaped the structure of the writer social network.
 
