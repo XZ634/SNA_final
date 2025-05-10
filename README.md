@@ -23,16 +23,24 @@ Using newspaper co-occurrence data and applying social network analysis methods,
     -   The writer network shows significant triadic closure, indicating small, cohesive social circles.
     -   Media exposure strongly increases a writer's likelihood of forming social ties.
     -   Writers of similar age or from the same hometown are more likely to connect.
+
+![Writers' Social Network (1910-1949)](index_files/figure-html/unnamed-chunk-6-1.png)
+
 2.  **Role of Education**
     -   Japanese-educated writers are more active in forming connections, but less likely to connect with each other.
     -   Western education is negatively associated with adopting leftist positions, though the effect is not statistically robust.
 3.  **Ideological Dynamics**
     -   Leftist writers are more likely to connect with each other (homophily), but no evidence suggests that leftist ideology spreads through the network.
+
+![The Spread of Lefist Ideology](index_files/figure-html/unnamed-chunk-48-1.png)
+
 4.  **Literary Societies**
     -   Members of older societies like the Creation Society are less connected, while members of the Left-Wing Writers’ League show strong internal cohesion.
 5.  **Post-Civil War Outcomes**
     -   Non-leftist writers tended to leave for Taiwan, while those who stayed included both leftist and non-leftist figures.
     -   Leftist loyalty and early revolutionary credentials (e.g., early CCP membership) appear to protect writers from political persecution more effectively than network position alone.
+
+![Post-Civil War Outcomes](index_files/figure-html/unnamed-chunk-57-1.png)
 
 ## 📂 Contributions
 
