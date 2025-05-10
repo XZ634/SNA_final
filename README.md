@@ -1,5 +1,7 @@
 # Ideological Dynamics and Social Ties: A Social Network Analysis of Republican-Era Chinese Writers (1910–1949)
 
+[Website of this project](https://xz634.github.io/SNA_final/)
+
 ## 📂 Introduction
 
 Following the fall of the Qing dynasty and the rise of the Republic of China, Chinese writers became active participants in cultural and political reform movements. Through literary societies, publications, and personal connections, these writers not only reshaped Chinese literature but also became deeply involved in ideological debates, particularly the growing influence of leftist thought.
