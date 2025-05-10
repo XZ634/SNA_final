@@ -1,0 +1,972 @@
+---
+title: "Ideological Dynamics and Social Ties: A Social Network Analysis of Republican-Era Chinese Writers (1910–1949)"
+author: Xiangming Zeng
+freeze: true
+format:
+  html:
+    toc: true
+    toc-location: right
+    toc-depth: 3
+    self-contained: true
+editor: visual
+execute:
+  fig-width: 14
+  fig-height: 8
+---
+
+```{r}
+library(tidyverse) |> suppressPackageStartupMessages()
+library(readxl) |> suppressPackageStartupMessages()
+library(igraph) |> suppressPackageStartupMessages()
+library(ggraph) |> suppressPackageStartupMessages()
+library(statnet) |> suppressPackageStartupMessages()
+library(network) |> suppressPackageStartupMessages()
+library(intergraph) |> suppressPackageStartupMessages()
+library(blockmodeling) |> suppressPackageStartupMessages()
+library(RSiena) |> suppressPackageStartupMessages()
+
+data("allEffects")
+```
+
+## 1. Introduction
+
+After the fall of the Qing dynasty and the establishment of the Republic of China (ROC), Chinese writers aimed to promote cultural and sociopolitical transformation. In 1917, Hu Shihh published his essay “Tentative Proposal for Literary Reform” in the radical Beijing monthly New Youth, marking the beginning of the literary reform movement. This movement called for the creation of a new national literature written not in the classical language but in the vernacular, opposing the outdated and esoteric classical literature and the ideas it represented. The movement was part of the larger New Culture Movement, and its initial success came in 1918 with the publication of “The Diary of a Madman” by Lu Xun in New Youth. Soon after, Lu Xun and his brother, Zhou Zuoren, emerged as leaders of the literary revolution. Lu Xun’s sharp satire critiquing China’s feudalistic traditions established him as China’s foremost critic and writer. His work, “The True Story of Ah Q” (1921), became an international classic and earned the admiration of Romain Rolland.
+
+In addition to the renowned Hu Shihh and Lu Xun, other intellectuals were also inspired to form literary associations driven by shared ideals. Among the most notable was the Literary Research Association, initiated by Mao Dun, which focused on a realist style. Poets of the Crescent Moon Society, such as Wen Yiduo and Xu Zhimo, integrated what they had learned during their studies in the West into their poetic creations. Meanwhile, members of the Creation Society were romantics, though the society’s leading figure, Guo Moruo, shifted towards Marxism in 1924. This transition also reflects a broader trend in the Chinese literary world of the 1920s, as the spread of communism in China led to a leftward shift in literary circles. A key milestone of this movement was the founding of the League of Left-Wing Writers in 1930, with Lu Xun as its titular leader.
+
+Beyond the aforementioned associations, authors such as Lao She, known for his humorous literature, and anarchist Ba Jin also became prominent prewar writers. Meanwhile, Cao Yu’s works, such as Thunderstorm (1934), reached the high-water mark of modern Chinese theatre. These writers continued to produce high-quality works during the Sino-Japanese War (1937–45), contributing to the war effort by creating patriotic literature. However, after the war, intellectual dissatisfaction with the Nationalist government in Chongqing grew during the ensuing civil war. A pivotal event was the assassination of Wen Yiduo, and the government’s mishandling of the incident triggered widespread criticism of the regime and increased intellectual sympathy toward the Chinese Communist Party (CCP).
+
+With the victory of the CCP and the retreat of the Nationalist government to Taiwan, most writers, driven by strong enthusiasm, chose to remain on the mainland and devote themselves to building the new state. Some writers expressed their loyalty to the new regime and became prominent political figures, such as Guo Moruo and Ba Jin. Others, unable to adapt to the Soviet-imported Socialist Realism, ceased producing new works altogether, such as Shen Congwen. Regardless of their choices, the social ties and creative legacies associated with the old regime led most writers to face the repercussions of subsequent political movements, such as the Anti-Rightist Movement (1957) and the Cultural Revolution (1966–76). A particularly tragic figure was Lao She, who took his own life by drowning after being subjected to humiliating public criticism by the Red Guards.
+
+This study aims to examine the social networks of Chinese Republican-era writers and explore a series of hypotheses. Some of these hypotheses treat social networks as the dependent variable, such as whether the leftward shift in writers’ ideologies led to the division of comrades in the literary reform movement into different factions. Others treat social networks as the independent variable, such as whether occupying key positions within the network became a source of political power? Whether having an extensive social network increased a writer’s chances of survival during radical social movements, or conversely, whether associations with “Rightist” writers made a writer more susceptible to persecution?
+
+## 2. Data Source
+
+**1. What is the source of your data?**
+
+**This study plan to measure relationships between writers based on the frequency with which they appear on the same newspaper page**. The Center for Research Libraries provides [the Late Qing and Republican-Era Chinese Newspapers database](https://gpa.eastview.com/crl/lqrcn/), which includes 292 publications and 463,954 pages. Additionally, the database offers an OCR (Optical Character Recognition)-based search engine, allowing for the simultaneous input of two keywords. Consequently, the data was collected by manually searching combinations of two writers' names.
+
+```{r}
+data <- read_excel("data/overall_data.xlsx") %>% select(-writers)
+```
+
+**2. Who/what are the nodes?**
+
+In the selection of writers, **in addition to key novelists and playwrights mentioned in A History Of Modern Chinese Fiction 1917-1957 (Hsia, 1961), this study also includes other prominent figures from the New Culture Movement**, such as Peking University President Cai Yuanpei, scholars Fu Sinian and Qian Xuantong, as well as influential pre-New Culture Movement scholars Liang Qichao and Zhang Taiyan. Below is the list of selected 28 writers and their relationship matrix, with the diagonal entries representing the total number of newspaper pages where the name of each writer appears.
+
+```{r}
+colnames(data)
+data
+```
+
+**3. What is the relationships represented by the edges?**
+
+During the 1910s to 1940s, when newspapers were the mainstream media, renowned writers undoubtedly attracted significant attention from the press, and the publication of their works often relied on newspaper advertisements for promotion. Therefore, the appearance of two writers on the same newspaper page, apart from being a coincidence, was more likely due to their participation in the same event, simultaneous mention by literary critics, joint appearance in advertisements, or even involvement in a literary controversy. Consequently, **the edges in this social network can measure the frequency of interactions between two writers as well as the proximity of their works within the literary world**.
+
+## 3. Overall Social Network (1910-1949)
+
+First, I used a weighted social network to visualize the co-occurrence network of writers over the 40 years.
+
+```{r}
+matrix <- as.matrix(data)
+
+sym_matrix <- matrix
+sym_matrix[is.na(sym_matrix)] <- 0 # replace NA to 0
+sym_matrix <- sym_matrix + t(sym_matrix) # add T matrix
+diag(sym_matrix) <- diag(matrix) # recover diagonal
+
+diag(sym_matrix) <- 0
+
+graph_w <- graph_from_adjacency_matrix(sym_matrix, mode = "undirected", diag = FALSE, weighted = TRUE)
+
+plot(graph_w, edge.width = scales::rescale(E(graph_w)$weight, to = c(1, 10)), vertex.label = colnames(sym_matrix), main = "Chinese writers' Social Network")
+```
+
+### 3.1 Data Preprocessing
+
+For simplicity, the relationship between two individuals is represented by two values: 1 for the existence of a connection and 0 for its absence. **This study first treats co-appearances in fewer than 10 newspaper pages as the absence of a connection and more than 30 pages as the presence of a connection. For values between 10 and 30, if the value is also less than 5% of the total pages where each writer appears (the diagonal entries), it is treated as the absence of a relationship**. Below is the implementation process in code.
+
+```{r}
+# co-appearances in fewer than 10 newspaper pages = no connection
+matrix[matrix < 10] <- 0
+
+# transform the matrix into a symmetric matrix
+sym_matrix <- matrix
+sym_matrix[is.na(sym_matrix)] <- 0 # replace NA to 0
+sym_matrix <- sym_matrix + t(sym_matrix) # add T matrix
+diag(sym_matrix) <- diag(matrix) # recover diagonal
+
+# for pages between 10 and 30, use 5% threshold
+n <- nrow(sym_matrix)
+
+for (i in 1:n) {
+  for (j in 1:n) {
+    if (i != j && sym_matrix[i, j] < 30 && (sym_matrix[i, j] < 0.05*sym_matrix[i, i] && sym_matrix[i, j] < 0.05*sym_matrix[j, j])) {
+      sym_matrix[i, j] <- 0
+    }
+  }
+}
+
+diag(sym_matrix) <- 0 # one person has no connection with himself
+sym_matrix[sym_matrix != 0] <- 1 # use 1 to represent connections
+```
+
+Now that we have the adjacency matrix, we can plot the social network graph.
+
+```{r}
+graph <- graph_from_adjacency_matrix(sym_matrix, mode = "undirected", diag = FALSE)
+
+plot(graph, vertex.label = colnames(sym_matrix),
+     layout = layout_with_kk,
+     main = "Chinese writers' Social Network",
+     vertex.size = 18)
+```
+
+This network contains 28 nodes and 115 edges, indicating a relatively high level of complexity.
+
+```{r}
+#Total Number of Edges
+ecount(graph)
+
+#Total Number of Nodes (Vertices)
+vcount(graph)
+```
+
+### 3.2 Analyzing the Network
+
+**1. What is the largest clique(s) in the network?**
+
+As shown below, there are **7 largest cliques** in this social network, each containing 7 nodes.
+
+```{r}
+largest_cliques(graph)
+```
+
+**2. What is the density of the network?**
+
+The density of the network is **0.3**, indicating this network is not too sparse.
+
+```{r}
+igraph::edge_density(graph)
+```
+
+**3. What proportion of nodes are in the largest connected component?**
+
+**96.43%** of the nodes are in the largest connected component, indicating widespread connections among the writers. The only exception is Eileen Chang, as her writing career began in Japanese-occupied Shanghai, isolating her from the writers who were primarily based in Yan’an and Chongqing during the war.
+
+![Eileen Chang (1920-1995)](pictures/ZhangAiling.jpg)
+
+```{r}
+27/28*100
+```
+
+**4. What is the diameter of the largest connected component?**
+
+The diameter of the largest connected component is **3**, indicating that the network is relatively **well-connected** and **compact**. In other words, any writer in the largest connected component can be reached from any other writer within three steps or fewer. As will be seen later, **Lu Xun** and **Hu Shih**, as two key betweenness nodes, created this structure.
+
+```{r}
+diameter(graph)
+```
+
+**5. Plot the degree distribution of your network**
+
+As shown in the figure below, there are **two “super nodes”** in this network with a degree greater than 20. This raises an open-ended analysis question: Who are these two nodes? What type of centrality do they represent?
+
+```{r}
+max_degree <- max(igraph::degree(graph))
+degree_dist <- degree.distribution(graph)
+barplot(degree_dist,ylab='Proportion of Nodes',xlab='Degree',names.arg = 0:max_degree)
+```
+
+### 3.3 Critical Position and Political Power
+
+From the degree distribution plot, we observe the presence of two “super nodes.” Therefore, I intend to **identify which two writers these nodes represent** and **what type of centrality they reflect**. In other words, which centrality measure best captures the importance of their positions? Furthermore, does occupying such critical positions potentially serve as a **source of political power**? To address these questions, I calculated the degree, betweenness, closeness, and eigenvector centrality for each node.
+
+```{r}
+graph_vis <- ggraph(graph,layout = 'kk') + theme_void()
+
+graph_vis <- graph_vis + 
+  geom_edge_link(width=0.5, color='grey') +
+  geom_node_point(size = 18, color= 'orange')
+
+graph_deg <- graph_vis + 
+  geom_node_text(aes(label=colnames(sym_matrix)), color='darkblue', size=6, nudge_y=0.1) + 
+  geom_node_text(aes(label=round(igraph::degree(graph),2)), color='black', size=6, nudge_y=-0.1)
+
+graph_bet <- graph_vis + geom_node_text(aes(label=colnames(sym_matrix)),color='darkblue',size=6, nudge_y=0.1) + 
+  geom_node_text(aes(label=round(igraph::betweenness(graph),2)),color='black',size=6, nudge_y=-0.1)
+
+graph_clo <- graph_vis + geom_node_text(aes(label=colnames(sym_matrix)),color='darkblue',size=6, nudge_y=0.1) + 
+  geom_node_text(aes(label=round(igraph::closeness(graph),2)),color='black',size=6, nudge_y=-0.1)
+
+graph_ev <- graph_vis + geom_node_text(aes(label=colnames(sym_matrix)),color='darkblue',size=6, nudge_y=0.1) + 
+  geom_node_text(aes(label=round(eigen_centrality(graph)[[1]],3)),color='black',size=6, nudge_y=-0.1)
+```
+
+**1. Degree centrality**
+
+```{r}
+graph_deg
+```
+
+The degree centrality plot shows that the two “super nodes” are **Hu Shih** (degree = 22) and **Lu Xun** (degree = 21), the two most important leaders of the New Culture Movement. This aligns perfectly with our expectations.
+
+![Lu Xun (1881-1936)](pictures/LuXun1930.jpeg)
+
+![Hu Shih (1891-1962)](pictures/HuShi.jpg)
+
+**2. Betweenness centrality**
+
+```{r}
+graph_bet
+```
+
+Betweenness centrality perfectly captures the importance of each position in the network. Hu Shih’s betweenness centrality is 90.77, while Lu Xun’s is 79.35. These influences brought political power to Hu Shih, who served as the president of the Academia Sinica and the Republic of China’s ambassador to the United States. However, Lu Xun’s untimely death prevented him from enjoying the honors that his position could have brought him.
+
+Interestingly, the other four individuals with betweenness centrality greater than 10 also gained **significant political power**.
+
+Cai Yuanpei (betweenness centrality = 15.63) served as the first Minister of Education of the Republic of China and as the President of Peking University.
+
+![Cai Yuanpei (1868-1940)](pictures/CaiYuanpei.jpeg)
+
+Zhou Zuoren (betweenness centrality = 11.06) was appointed as a standing committee member of the puppet government’s Political Affairs Commission and as the director of the Department of Education during the Japanese occupation.
+
+![Zhou Zuoren (1885-1967)](pictures/ZhouZuoren.jpg)
+
+Ba Jin (betweenness centrality = 13.08) was elected as the Vice Chairman of the National Committee of the Chinese People’s Political Consultative Conference (a key national leadership position) five times in the People’s Republic of China.
+
+![Ba Jin (1904-2005)](pictures/BaJin.jpg)
+
+Guo Moruo (betweenness centrality = 11.25) served as Vice Premier of the People’s Republic of China and the first chairman of the China Federation of Literary and Art Circles.
+
+![Guo Moruo (1892-1978)](pictures/GuoMoruo.jpg)
+
+These four writers with high betweenness centrality attained significant political power across three different governments, which seems to suggest the **potential of betweenness centrality to translate into political power**.
+
+**3. Closeness centrality**
+
+```{r}
+graph_clo
+```
+
+It is clear that closeness centrality is not a very effective measure. Most nodes receive a value of 0.02, with only a few nodes obtaining a value of 0.03. This makes it difficult to make nuanced comparisons between these nodes.
+
+**4. Eigenvector centrality**
+
+```{r}
+graph_ev
+```
+
+The eigenvector centrality values align closely with betweenness centrality, with the two “super nodes” receiving scores of 1 and 0.996, respectively. However, this method has a potential drawback: **it can exaggerate the importance of certain nodes that are not actually significant**. For instance, Zhang Tianyi, who has relatively low prominence in modern Chinese literary history, only has a betweenness centrality of 1.77, which aligns with domain knowledge. Yet, he receives an eigenvector centrality of 0.662, making him appear to occupy an important position. In contrast, Cai Yuanpei, the president of Peking University, who had connections with many writers and holds a high betweenness centrality of 15.63, only receives an eigenvector centrality of 0.544.
+
+In summary, within the social network of Chinese writers, **betweenness centrality is a better measure of positional importance than eigenvector centrality**.
+
+### 3.4 ERGM
+
+In addition, I collected several background characteristics of the writers (constant variables) to explore the structure and patterns of the writer social network using ERGM. These variables include the writers’ birth and death years, their home provinces, educational background (whether they studied in Japan or the West), membership in literary societies, and whether they remained on the mainland or relocated to Taiwan with the Nationalist government after the end of the civil war (with one special case, Eileen Chang, who settled in the United States but is classified as having moved to Taiwan for simplicity). I also recorded whether writers who stayed on the mainland experienced political persecution.
+
+Additionally, I transformed the values on the diagonal of the adjacency matrix (the total number of newspaper pages on which each writer appeared) into a variable called “exposure” to measure each writer’s media visibility.
+
+```{r}
+cons <- read_excel("data/constants.xlsx") %>% select(-writers)
+
+cons <- cons %>% mutate(exposure = diag(as.matrix(data)))
+```
+
+```{r}
+for (attr in colnames(cons)) {
+  graph <- set_vertex_attr(graph, attr, value = cons[[attr]])
+}
+```
+
+```{r}
+# convert to network to allow ERGM
+net <- asNetwork(graph)
+```
+
+#### 3.4.1 Model 0: Basic Model
+
+For the first model, I care about the impact of media visibility and triadic closure.
+
+```{r}
+#| cache: true
+model0 <- ergm(net ~ edges + nodecov("exposure") + gwesp(0.5,fixed=T))
+summary(model0)
+```
+
+As shown in the outcomes, both nodecov.exposure and gwesp.fixed.0.5 are positive and statistically significant, indicating that the writer social network exhibits a pronounced triadic closure structure, suggesting that writers tend to form closely connected small groups. In addition, the writers’ media exposure significantly increases their likelihood of forming connections in the network, highlighting the important role of visibility and public recognition in shaping social ties.
+
+#### 3.4.2 Model 1: New Youth and Writers' Social Network
+
+The radical Beijing monthly New Youth (Xin Qing Nian) was highly influential in shaping modern Chinese literature. Two of the most influential writers, Hu Shi served as its editor, while Lu Xun was its primary contributor. Therefore, I propose the hypothesis that writers who participated in New Youth are more likely to form connections in the social network.
+
+![Cover of New Youth](pictures/New_Youth_Cover.jpg)
+
+```{r}
+#| cache: true
+model1a <- ergm(net ~ edges + nodecov("XQN"))
+summary(model1a)
+```
+
+As shown in the outcomes, nodecov.XQN is positive and statistically significant, indicating that my hypothesis is supported. Writers who participated in New Youth are more likely to form connections in the social network. However, one concern is that this result may simply reflect the fact that participation in New Youth increased the writers’ public visibility. Therefore, I further controlled for the writers’ media exposure in the model.
+
+```{r}
+#| cache: true
+model1b <- ergm(net ~ edges + nodecov("exposure") + nodecov("XQN"))
+summary(model1b)
+```
+
+After controlling for nodecov.exposure, nodecov.XQN becomes statistically insignificant, supporting my speculation. This suggests that media visibility plays an important mediating role in the relationship between participation in New Youth and a higher likelihood of forming social connections in the network.
+
+#### 3.4.3 Model 2: Gender, Age, Hometown, and Education
+
+In this model, I control for media exposure and include gender, age, hometown province, and educational background (whether the writer studied in Japan or the West) as additional variables. My hypothesis is that writers of the same gender, similar age, and from the same province are more likely to form connections. In addition, I am curious about whether different educational backgrounds may also influence the formation of social ties.
+
+```{r}
+#| cache: true
+model2a <- ergm(net ~ edges +
+                 nodecov("exposure") +
+                 nodematch("gender") +         
+                 absdiff("birth_year") +       
+                 nodematch("hometown") +       
+                 nodecov("Jap_edu") +          
+                 nodecov("West_edu"))
+summary(model2a)
+```
+
+As shown in the outcomes, nodematch.gender is not statistically significant, suggesting that gender-based homophily does not exist in this network. Of course, one possible explanation is the highly unbalanced gender distribution in the sample, with only four female writers out of twenty-eight. In contrast, the coefficient for absdiff.birth_year is significantly negative, indicating that writers are more likely to form connections with their peers of similar age. Finally, nodematch.hometown is positively significant at the 0.1 level, suggesting that hometown ties may promote connection formation, although this effect is only marginally significant.
+
+In terms of educational background, nodecov.Jap_edu is positively significant, suggesting that writers with study experience in Japan are more likely to form connections with other writers. However, this pattern is not observed among those who studied in the West. One possible explanation lies in the cultural differences between Japan and the West, particularly regarding collectivism and individualism, with writers potentially influenced by the cultural environment of their host country during their studies. Another explanation is that after the Russo-Japanese War, Japan emerged as a key destination for Chinese youth with strong political ambitions for national strengthening, attracting students who were more eager to change the status quo. This motivation may have driven them to actively seek connections and form cultural or political groups—a dynamic that is further reflected in later findings linking Japanese education background to leftist tendencies.
+
+Another hypothesis is that writers with the same overseas educational background are more likely to form connections.
+
+```{r}
+#| cache: true
+model2b <- ergm(net ~ edges +
+                 nodecov("exposure") +
+                 nodematch("gender") +         
+                 absdiff("birth_year") +       
+                 nodematch("hometown") +       
+                 nodematch("Jap_edu") +        
+                 nodematch("West_edu"))
+summary(model2b)
+```
+
+Surprisingly, nodematch.Jap_edu is negative and statistically significant (p \< 0.05), indicating that writers who share a Japanese educational background are actually less likely to form connections with each other. I have not come up with a reasonable explanation，so this phenomenon deserve more research. Also, nodematch.West_edu is insignificant, echoing the individualism explanation.
+
+#### 3.4.4 Model 3: Membership in Literary Societies
+
+In this section, I primarily examine whether members of the same literary societies are more likely to form connections. These societies include New Youth (XQN), the Literary Research Association (LRA), the Creation Society (CS), the Crescent Moon Society (CMS), Yusi (YS), and the League of Left-Wing Writers (LLWW).
+
+```{r}
+#| cache: true
+model3 <- ergm(net ~ edges +
+                 nodecov("exposure") +
+                 nodematch("XQN") +
+                 nodematch("LRA") +
+                 nodematch("CS") +
+                 nodematch("CMS") +
+                 nodematch("YS") +
+                 nodematch("LLWW"))
+summary(model3)
+```
+
+As shown in the outcomes, the coefficient for the League of Left-Wing Writers is significantly positive, indicating strong internal cohesion. However, the coefficients for the Literary Research Association, the Creation Society, and Yusi, which were early literary societies, are significantly negative, which is likely due to factional splits driven by the rise of leftist ideology.
+
+#### 3.4.5 Model 4: Mainland VS. Taiwan
+
+Following the end of the civil war between 1946 and 1949, some writers remained on the mainland, while others relocated to Taiwan with the Nationalist government, or, in the case of Eileen Chang, settled in the United States. My hypothesis is that writers who shared the same post-war destination are more likely to form connections with one another.
+
+```{r}
+#| cache: true
+model4 <- ergm(net ~ edges +
+                 nodecov("exposure") +
+                 nodematch("mainland") +
+                 nodematch("taiwan"))
+summary(model4)
+```
+
+As I expected, writers who remained on the mainland are significantly more likely to form connections with one another. However, although the coefficient for nodematch.taiwan is positive, it is not statistically significant. This may be because those who stayed on the mainland were mostly leftist writers, while those who left were more influenced by Western individualist values, leading to weaker or looser connections among them.
+
+### 3.5 Clusters and Equivalence
+
+#### 3.5.1 Clusters
+
+I am curious whether clustering algorithms can be used to identify the literary societies to which the writers belonged. Therefore, I applied both the Girvan–Newman algorithm and the Clauset–Newman–Moore algorithm to explore this possibility.
+
+```{r}
+set.seed(123)
+lay <- layout_with_fr(graph)
+
+# Girvan-Newman Algorithm
+ebc <- cluster_edge_betweenness(graph, directed=F)
+plot(as.dendrogram(ebc))
+```
+
+```{r}
+V(graph)$color <- as.character(membership(ebc)) 
+plot(graph, layout = lay)
+```
+
+As shown in the figure, the Girvan–Newman algorithm produced too many clusters, failing to effectively identify the writers’ membership in literary societies.
+
+```{r}
+# Clauset-Newman-Moore Algorithm
+fgc <- cluster_fast_greedy(graph)
+plot(as.dendrogram(fgc))
+```
+
+```{r}
+V(graph)$color <- as.character(membership(fgc)) 
+plot(graph, layout = lay)
+```
+
+The Clauset–Newman–Moore algorithm produced more reasonable clusters, which appear to identify the League of Left-Wing Writers (green) and the Crescent Moon Society (blue) as two opposing literary groups. To facilitate comparison and validation, I visualized the members of these two societies.
+
+```{r}
+V(graph)$color <- ifelse(
+  V(graph)$LLWW == 1, "red",           # LLWW - red
+  ifelse(V(graph)$CMS == 1, "blue",    # CMS - blue
+         "lightgray")                 
+)
+
+plot(graph, layout = lay)
+
+legend("topleft",
+       legend = c("LLWW", "CMS", "Others"),
+       col = c("red", "blue", "lightgray"),
+       pch = 16, pt.cex = 1.5, bty = "n")
+```
+
+#### 3.5.2 Equivalence
+
+In addition, I also applied Blockmodeling Clustering and Correlation Matrix Clustering to identify left-wing and non-left-wing writers. Therefore, the number of clusters was set to two.
+
+```{r}
+# Blockmodeling Clustering
+blocks_2 <- optRandomParC(M=sym_matrix, k=2, rep=50, approaches = "hom", homFun = "ss", blocks="com")
+```
+
+```{r}
+blocks_2_membership <- blocks_2$best$best1$clu
+V(graph)$color <- as.character(blocks_2_membership)
+plot(graph, layout = lay, main="Blockmodeling Clustering")
+```
+
+The results of the Blockmodeling Clustering algorithm appear to follow a core–periphery pattern rather than a left–right division. As a result, Xiao Hong and Xiao Hua, two representative left-wing writers, were both excluded from the cluster dominated by left-wing writers.
+
+```{r}
+# Correlation Matrix Clustering
+diag(sym_matrix) <- 1
+
+cor_matrix <- cor(cor(cor(cor(cor(cor(cor(sym_matrix)))))))
+cor_memebership <- (round(cor_matrix[1,])*0.5+0.5)+1
+V(graph)$color <- as.character(cor_memebership)
+plot(graph, layout = lay, main="Correlation Matrix Clustering")
+```
+
+Correlation Matrix Clustering provided a clearer identification of the left–right division in the writer social network. To facilitate comparison, I introduced a new dataset that records these writers’ leftist orientation across the 1910s, 1920s, 1930s, and 1940s (ranging from 0 for non-leftist to 3 for the highest level of leftist orientation). The data were generated based on my reading and coding of biographical information from Wikipedia.
+
+```{r}
+left <- read_excel("data/left_wing.xlsx") %>% select(-writers) %>% mutate_all(as.integer)
+```
+
+```{r}
+V(graph)$left <- left$s1940
+
+left_colors <- c("lightgray", colorRampPalette(c("#FFCCCC", "#FF6666", "#990000"))(3))
+
+V(graph)$color <- left_colors[V(graph)$left + 1]
+
+plot(graph,
+     layout = lay,
+     vertex.color = V(graph)$color,
+     vertex.label = V(graph)$name,
+     main = "left-wing writers")
+
+legend("topleft",
+       legend = c("non-left", "left 1", "left 2", "left 3"),
+       col = left_colors,
+       pch = 16, pt.cex = 1.5, bty = "n")
+```
+
+As shown in the figure, the orange cluster produced by Correlation Matrix Clustering largely overlaps with the left-wing writers. The two left-wing writers outside this cluster, Chen Duxiu and Li Dazhao, are both exceptional cases—Chen Duxiu broke with the Chinese Communist Party in the 1930s, while Li Dazhao was executed by warlords in the 1920s. As a result, both had weaker social connections with other left-wing writers.
+
+## 4. Evolution of Writers' Social Network
+
+All of the analyses above are static. To explore the formation process of the writer social network, I collected co-occurrence data from newspapers covering four historical periods: 1910–1919, 1920–1929, 1930–1939, and 1940–1949.
+
+### 4.1 Data Preprocessing
+
+```{r}
+data_1910s <- read_excel("data/1910-1919_data.xlsx") %>% select(-writers)
+data_1920s <- read_excel("data/1920-1929_data.xlsx") %>% select(-writers)
+data_1930s <- read_excel("data/1930-1939_data.xlsx") %>% select(-writers)
+data_1940s <- read_excel("data/1940-1949_data.xlsx") %>% select(-writers)
+```
+
+Since SAOM/SIENA models cannot be applied to weighted social networks, I addressed this by converting weighted networks into binary networks, as I did in Section 3.1. To do so, I experimented with different threshold settings, taking into account the level of media development in each historical period, which can be measured by the total number of newspaper pages covering the writers.
+
+1910-1919
+
+```{r}
+matrix <- as.matrix(data_1910s)
+
+# transform the matrix into a symmetric matrix
+sym_matrix <- matrix
+sym_matrix[is.na(sym_matrix)] <- 0 # replace NA to 0
+sym_matrix <- sym_matrix + t(sym_matrix) # add T matrix
+diag(sym_matrix) <- diag(matrix) # recover diagonal
+
+diag(sym_matrix) <- 0 # one person has no connection with himself
+sym_matrix[sym_matrix != 0] <- 1 # use 1 to represent connections
+
+matrix_1 <- sym_matrix
+dimnames(matrix_1) <- NULL
+```
+
+```{r}
+graph_1 <- graph_from_adjacency_matrix(sym_matrix, mode = "undirected", diag = FALSE)
+
+plot(graph_1, vertex.label = colnames(sym_matrix),
+     main = "Chinese writers' Social Network (1910-1919)",
+     layout = lay,
+     vertex.size = 18)
+```
+
+1920-1929
+
+```{r}
+matrix <- as.matrix(data_1920s)
+
+# co-appearances in fewer than 5 newspaper pages = no connection
+matrix[matrix < 5] <- 0
+
+# transform the matrix into a symmetric matrix
+sym_matrix <- matrix
+sym_matrix[is.na(sym_matrix)] <- 0 # replace NA to 0
+sym_matrix <- sym_matrix + t(sym_matrix) # add T matrix
+diag(sym_matrix) <- diag(matrix) # recover diagonal
+
+# for pages between 5 and 15, use 5% threshold
+n <- nrow(sym_matrix)
+
+for (i in 1:n) {
+  for (j in 1:n) {
+    if (i != j && sym_matrix[i, j] < 15 && (sym_matrix[i, j] < 0.05*sym_matrix[i, i] && sym_matrix[i, j] < 0.05*sym_matrix[j, j])) {
+      sym_matrix[i, j] <- 0
+    }
+  }
+}
+
+diag(sym_matrix) <- 0 # one person has no connection with himself
+sym_matrix[sym_matrix != 0] <- 1 # use 1 to represent connections
+
+matrix_2 <- sym_matrix
+dimnames(matrix_2) <- NULL
+```
+
+```{r}
+graph_2 <- graph_from_adjacency_matrix(sym_matrix, mode = "undirected", diag = FALSE)
+
+plot(graph_2, vertex.label = colnames(sym_matrix),
+     main = "Chinese writers' Social Network (1920-1929)",
+     layout = lay,
+     vertex.size = 18)
+```
+
+1930-1939
+
+```{r}
+matrix <- as.matrix(data_1930s)
+
+# co-appearances in fewer than 5 newspaper pages = no connection
+matrix[matrix < 5] <- 0
+
+# transform the matrix into a symmetric matrix
+sym_matrix <- matrix
+sym_matrix[is.na(sym_matrix)] <- 0 # replace NA to 0
+sym_matrix <- sym_matrix + t(sym_matrix) # add T matrix
+diag(sym_matrix) <- diag(matrix) # recover diagonal
+
+# for pages between 5 and 20, use 10% threshold
+n <- nrow(sym_matrix)
+
+for (i in 1:n) {
+  for (j in 1:n) {
+    if (i != j && sym_matrix[i, j] < 20 && (sym_matrix[i, j] < 0.1*sym_matrix[i, i] && sym_matrix[i, j] < 0.1*sym_matrix[j, j])) {
+      sym_matrix[i, j] <- 0
+    }
+  }
+}
+
+diag(sym_matrix) <- 0 # one person has no connection with himself
+sym_matrix[sym_matrix != 0] <- 1 # use 1 to represent connections
+
+matrix_3 <- sym_matrix
+dimnames(matrix_3) <- NULL
+```
+
+```{r}
+graph_3 <- graph_from_adjacency_matrix(sym_matrix, mode = "undirected", diag = FALSE)
+
+plot(graph_3, vertex.label = colnames(sym_matrix),
+     main = "Chinese writers' Social Network (1930-1939)",
+     layout = lay,
+     vertex.size = 18)
+```
+
+1940-1949
+
+```{r}
+matrix <- as.matrix(data_1940s)
+
+# co-appearances in fewer than 5 newspaper pages = no connection
+matrix[matrix < 5] <- 0
+
+# transform the matrix into a symmetric matrix
+sym_matrix <- matrix
+sym_matrix[is.na(sym_matrix)] <- 0 # replace NA to 0
+sym_matrix <- sym_matrix + t(sym_matrix) # add T matrix
+diag(sym_matrix) <- diag(matrix) # recover diagonal
+
+# for pages between 5 and 15, use 5% threshold
+n <- nrow(sym_matrix)
+
+for (i in 1:n) {
+  for (j in 1:n) {
+    if (i != j && sym_matrix[i, j] < 15 && (sym_matrix[i, j] < 0.05*sym_matrix[i, i] && sym_matrix[i, j] < 0.05*sym_matrix[j, j])) {
+      sym_matrix[i, j] <- 0
+    }
+  }
+}
+
+diag(sym_matrix) <- 0 # one person has no connection with himself
+sym_matrix[sym_matrix != 0] <- 1 # use 1 to represent connections
+
+matrix_4 <- sym_matrix
+dimnames(matrix_4) <- NULL
+```
+
+```{r}
+graph_4 <- graph_from_adjacency_matrix(sym_matrix, mode = "undirected", diag = FALSE)
+
+plot(graph_4, vertex.label = colnames(sym_matrix),
+     main = "Chinese writers' Social Network (1940-1949)",
+     layout = lay,
+     vertex.size = 18)
+```
+
+### 4.2 The Spread of Left-Wing Ideology
+
+After constructing the writer social networks for the four historical periods, it becomes possible to visualize the diffusion of leftist ideology over time.
+
+```{r}
+# graph 1
+V(graph_1)$left <- left$s1910
+
+V(graph_1)$color <- left_colors[V(graph_1)$left + 1]
+
+# graph 2
+V(graph_2)$left <- left$s1920
+
+V(graph_2)$color <- left_colors[V(graph_2)$left + 1]
+
+# graph 3
+V(graph_3)$left <- left$s1930
+
+V(graph_3)$color <- left_colors[V(graph_3)$left + 1]
+
+# graph 4
+V(graph_4)$left <- left$s1940
+
+V(graph_4)$color <- left_colors[V(graph_4)$left + 1]
+```
+
+```{r}
+par(mfrow = c(2,2))
+
+#graph 1
+plot(graph_1,
+     layout = lay,
+     vertex.color = V(graph_1)$color,
+     vertex.label = V(graph_1)$name,
+     main = "left-wing writers (1910-1919)")
+
+legend("topleft",
+       legend = c("non-left", "left 1", "left 2", "left 3"),
+       col = left_colors,
+       pch = 16, pt.cex = 1.5, bty = "n")
+
+# graph 2
+plot(graph_2,
+     layout = lay,
+     vertex.color = V(graph_2)$color,
+     vertex.label = V(graph_2)$name,
+     main = "left-wing writers (1920-1929)")
+
+legend("topleft",
+       legend = c("non-left", "left 1", "left 2", "left 3"),
+       col = left_colors,
+       pch = 16, pt.cex = 1.5, bty = "n")
+
+# graph 3
+plot(graph_3,
+     layout = lay,
+     vertex.color = V(graph_3)$color,
+     vertex.label = V(graph_3)$name,
+     main = "left-wing writers (1930-1939)")
+
+legend("topleft",
+       legend = c("non-left", "left 1", "left 2", "left 3"),
+       col = left_colors,
+       pch = 16, pt.cex = 1.5, bty = "n")
+
+# graph 4
+plot(graph_4,
+     layout = lay,
+     vertex.color = V(graph_4)$color,
+     vertex.label = V(graph_4)$name,
+     main = "left-wing writers (1940-1949)")
+
+legend("topleft",
+       legend = c("non-left", "left 1", "left 2", "left 3"),
+       col = left_colors,
+       pch = 16, pt.cex = 1.5, bty = "n")
+
+par(mfrow = c(1,1))
+```
+
+### 4.3 SAOM/SIENA Models
+
+Next, I will apply a series of SAOM/SIENA models to explore the mechanisms through which leftist ideology spread among writers.
+
+```{r}
+# Dependent Variable
+connect <- sienaDependent(
+  array(c(matrix_1, matrix_2, matrix_3, matrix_4), dim = c(28, 28, 4))
+)
+
+left_dep <- sienaDependent(as.matrix(left), type = "behavior")
+
+# Independent Variable
+left_var <- varCovar(as.matrix(left))
+```
+
+#### 4.3.1 Structure 1: Basic Model
+
+```{r}
+#| cache: true
+#1 Create Data
+mydata <- sienaDataCreate(connect)
+#2 Get Effects 
+myeff<-getEffects(mydata)
+#3 Define algothim
+myalgorithm <- sienaAlgorithmCreate(projname = 'SienaOutput' )
+#4 Run model
+Structure_1 <- siena07( myalgorithm, data = mydata, effects = myeff, silent = TRUE)
+#5 Look at Results
+Structure_1
+```
+
+#### 4.3.2 Structure 2: Transitivity
+
+```{r}
+#| cache: true
+#1 Create Data
+mydata <- sienaDataCreate(connect)
+#2 Let's add effect for Transitive Triples to 'myeff;
+myeff<-getEffects(mydata)
+myeff <- includeEffects(myeff, transTies)
+#3 Define algorithm
+myalgorithm <- sienaAlgorithmCreate( projname = 'SienaOutput' )
+#4 Run model
+Structure_2 <- siena07( myalgorithm, data = mydata, effects = myeff, silent = TRUE)
+#5 Look at Results
+Structure_2
+```
+
+The positive and statistically significant coefficient of transitive ties indicates that friends of friends are more likely to be connected, suggesting that the writer network tends to form small cohesive groups. This finding is consistent with the previous ERGM results.
+
+#### 4.3.3 Structure 3: Homophily
+
+```{r}
+#| cache: true
+#1 Create Data
+mydata <- sienaDataCreate(connect, left_var)
+#2 Get effects and add effect for Transitive Triples
+myeff <- getEffects(mydata)
+myeff <- includeEffects(myeff,transTies)
+#2 cont. add selection/homophily, absolute effect of variable on giving/recieving ties to model.
+myeff <- includeEffects(myeff, simX, interaction1 = "left_var" )
+#3 Define algorithm
+myalgorithm <- sienaAlgorithmCreate( projname = 'SienaOutput' )
+#4 Run model
+Structure_3 <- siena07( myalgorithm, data = mydata, effects = myeff, silent = TRUE)
+#5 Look at Results
+Structure_3
+```
+
+The coefficient for left_var similarity is positive, and the value of the estimate exceeds 1.5 times the standard error. This suggests that writers with similar leftist orientations are more likely to form social connections, indicating that ideology plays an important role in the formation of writer cliques.
+
+#### 4.3.4 Structure 4: Influence of Peers
+
+```{r}
+#| cache: true
+#1 Create Data
+mydata <- sienaDataCreate(connect,left_dep)
+#2 Get effects and add effect for Transitive Triples
+myeff <-getEffects(mydata)
+myeff <- includeEffects(myeff,transTies)
+#2 cont. add selection/homophily, absolute effect of smoking on giving/recieving ties to model.
+myeff <- includeEffects(myeff, avAlt, name="left_dep", interaction1 = "connect")
+#3 Define algorithm
+myalgorithm <- sienaAlgorithmCreate( projname = 'SienaOutput' )
+#4 Run model
+Structure_4 <- siena07( myalgorithm, data = mydata, effects = myeff, silent = TRUE)
+#5 Look at Results
+Structure_4
+```
+
+Because of severe multicollinearity, the model fails to compute standard errors, making it impossible to assess the significance of the estimates. One possible explanation for this issue is that the writers’ political orientations did not change substantially from the 1930s to the 1940s. Therefore, I will restrict the analysis to the first three historical periods.
+
+```{r}
+# Dependent Variable
+connect_1 <- sienaDependent(
+  array(c(matrix_1, matrix_2, matrix_3), dim = c(28, 28, 3))
+)
+
+left_dep_1 <- sienaDependent(as.matrix(left[, 1:3]), type = "behavior")
+```
+
+```{r}
+#| cache: true
+#1 Create Data
+mydata <- sienaDataCreate(connect_1,left_dep_1)
+#2 Get effects and add effect for Transitive Triples
+myeff <-getEffects(mydata)
+myeff <- includeEffects(myeff,transTies)
+#2 cont. add selection/homophily, absolute effect of smoking on giving/recieving ties to model.
+myeff <- includeEffects(myeff, avAlt, name="left_dep_1", interaction1 = "connect_1")
+#3 Define algorithm
+myalgorithm <- sienaAlgorithmCreate( projname = 'SienaOutput' )
+#4 Run model
+Structure_4 <- siena07( myalgorithm, data = mydata, effects = myeff, silent = TRUE)
+#5 Look at Results
+Structure_4
+```
+
+The model is now able to successfully compute standard errors. However, it does not find significant evidence that leftist ideology spreads through the social network. In other words, the shift toward or away from leftist positions among writers does not appear to be driven by peer influence within their social circles. Therefore, this study proceeds to explore other potential factors, such as whether overseas educational experience influenced writers’ leftist orientation.
+
+#### 4.3.5 Structure 5: Influence of Education
+
+```{r}
+#| cache: true
+jap_edu <- coCovar(cons$Jap_edu)
+west_edu <- coCovar(cons$West_edu)
+
+#1 Create Data
+mydata <- sienaDataCreate(connect_1, left_dep_1, jap_edu, west_edu)
+#2 Get effects and add effect for Transitive Triples
+myeff <-getEffects(mydata)
+myeff <- includeEffects(myeff,transTies)
+#2 cont. add selection/homophily, absolute effect of smoking on giving/recieving ties to model.
+myeff <- includeEffects(myeff, effFrom, name = "left_dep_1", interaction1 = "jap_edu")
+myeff <- includeEffects(myeff, effFrom, name = "left_dep_1", interaction1 = "west_edu")
+#3 Define algorithm
+myalgorithm <- sienaAlgorithmCreate( projname = 'SienaOutput' )
+#4 Run model
+Structure_5 <- siena07( myalgorithm, data = mydata, effects = myeff, silent = TRUE)
+#5 Look at Results
+Structure_5
+```
+
+While the estimates for jap_edu and west_edu show expected directional trends—positive for Japanese education and negative for Western education—neither effect reaches statistical significance. These results suggest that while educational background may influence writers’ leftist orientation, the current data do not provide conclusive evidence. However, although the estimate of west_edu is not statistically significant, the absolute value of the estimate is close to 1.5 times the standard error (1.32 times), suggesting a potentially meaningful trend that Western education appears to reduce the likelihood of adopting leftist positions.
+
+## 5. Social Network and Political Persecution
+
+I originally intended to use SAOM/SIENA models to investigate the impact of social networks on writers’ experiences of political persecution. However, since most instances of political persecution occurred after 1949, this variable remains constant across the four historical periods and thus cannot be meaningfully analyzed in the dynamic network models. Moreover, I found that only two writers who remained on the mainland were not subjected to persecution, resulting in an insufficient sample size for quantitative analysis. Therefore, I will attempt to explore the relationship between social networks and political persecution qualitatively.
+
+```{r}
+V(graph)$color <- ifelse(
+  V(graph)$taiwan == 1, "blue",           # LLWW - red
+  ifelse(V(graph)$mainland == 1, 
+         ifelse(V(graph)$persecution == 1, "red", "green"),    # CMS - blue
+         "lightgray")                 
+)
+
+plot(graph, layout = lay)
+
+legend("topleft",
+       legend = c("Taiwan", "Mainland and Under Persecution", "Mainland and Safe", "Died Before 1949"),
+       col = c("blue", "red", "green", "lightgray"),
+       pch = 16, pt.cex = 1.5, bty = "n")
+```
+
+As shown in the figure, none of the writers who left the mainland were leftist, while those who stayed on the mainland included both leftist and non-leftist writers. Ironically, many of those who chose to stay on the mainland and later suffered political persecution were left-wing writers who had placed their hopes in the new state established by the Chinese Communist Party, such as Xiao Jun, Zhang Tianyi, Ding Ling, and Ba Jin. However, non-leftist writers who remained on the mainland were not spared either, as all of them experienced persecution. The only two writers who escaped political persecution were both leftist writers, Mao Dun and Guo Moruo.
+
+Guo Moruo had a betweenness centrality of 11.25 and served as Vice Premier of the People’s Republic of China and the first chairman of the China Federation of Literary and Art Circles. The story of Guo brings us back to the interesting phenomenon discussed in Section 3.3: in China, a writer’s influence within the social network can translate into political power. What seems even clearer now is that such influence-derived power could help protect writers—though not with absolute certainty—from political purges, provided that they possessed the “correct” ideology—leftism.
+
+```{r}
+graph_bet
+```
+
+However, this does not explain Mao Dun’s survival, as his betweenness centrality is only 1.78, indicating relatively limited structural influence in the network. In addition, although Ba Jin had a higher betweenness centrality (13.08) than Guo Moruo, he still suffered political persecution. Therefore, I identified another similarity between Mao Dun and Guo Moruo: both had already emerged as leftist writers in the 1910s, and had reached the highest level of leftist orientation (coded as 3) as early as the 1920s.
+
+Specifically, Mao Dun joined the Shanghai Communist Group led by Chen Duxiu in late 1920, and was among the first members of the Chinese Communist Party when it was founded in July 1921. Similarly, Guo Moruo joined the Party in 1927 with the recommendation of senior CCP leader Zhou Enlai.
+
+Therefore, rather than political power or influence within the social network, their survival in political struggles seems to be more closely tied to their long-standing revolutionary credentials.
+
+```{r}
+#graph 1
+plot(graph_1,
+     layout = lay,
+     vertex.color = V(graph_1)$color,
+     vertex.label = V(graph_1)$name,
+     main = "left-wing writers (1910-1919)")
+
+legend("topleft",
+       legend = c("non-left", "left 1", "left 2", "left 3"),
+       col = left_colors,
+       pch = 16, pt.cex = 1.5, bty = "n")
+
+# graph 2
+plot(graph_2,
+     layout = lay,
+     vertex.color = V(graph_2)$color,
+     vertex.label = V(graph_2)$name,
+     main = "left-wing writers (1920-1929)")
+
+legend("topleft",
+       legend = c("non-left", "left 1", "left 2", "left 3"),
+       col = left_colors,
+       pch = 16, pt.cex = 1.5, bty = "n")
+```
+
+## 6. Conclusion and Discussion
+
+### 6.1 Conclusion
+
+This study uses the co-occurrence social network of writers in Republican-era newspapers (1910–1949) to examine the dynamics of social relationships among major figures in modern Chinese literary history, as well as the causes and consequences of the spread of leftist ideology.
+
+The main findings are as follows. First, a writer’s prominent position in the social network (measured by betweenness centrality) can be translated into political power. Second, media exposure emerges as the most important factor driving the formation of social connections, while writers of similar age or from the same hometown are also more likely to connect with each other. Structurally, the network is shaped by triadic closure, indicating a tendency for writers to form small, cohesive circles. Additionally, educational background also influences the network structure: writers with Japanese educational experience are more likely to form new connections but less likely to connect with each other. However, this pattern is not observed among writers with Western educational backgrounds. A possible explanation is that, after the Russo-Japanese War, Japan became an ideal study destination for progressive Chinese youth, who were driven by a stronger ambition to change society and therefore had a greater need to form cultural and political groups.
+
+Interestingly, the findings also show that members of older literary societies, such as the Creation Society and the Literary Research Association, were less likely to connect with one another, while members of newer organizations, such as the League of Left-Wing Writers, were more likely to form connections. This reflects how the spread of leftist ideology fragmented the old literary circles, profoundly reshaping the writer social network.
+
+To investigate how this ideological diffusion took place and how it shaped the network, this study constructed writer social networks for four historical periods (1910s, 1920s, 1930s, and 1940s), along with data on each writer’s level of leftist orientation across these periods. The results show evidence of homophily among leftist writers, meaning that leftist writers were more likely to connect with one another. However, there is no evidence that leftist ideology actually spread through the social network. Therefore, I further analyzed the relationship between educational background and ideology. It seems like Japanese education was not significantly associated with leftist orientation, while Western education appears to reduce the likelihood of adopting leftist positions. Although this relationship is not statistically significant, the absolute value of the estimate is close to 1.5 times the standard error, suggesting a potentially meaningful trend.
+
+Finally, this study examines the post–civil war trajectories of writers: whether they remained on the mainland or relocated to Taiwan? As well as the factors associated with political persecution among those who stayed on the mainland. None of the writers who left the mainland were leftist, while those who stayed included both leftist and non-leftist writers. Among those who stayed, all non-leftist writers suffered political persecution, while only two leftist writers—Mao Dun and Guo Moruo—escaped persecution. What they had in common was that both had joined the Chinese Communist Party at an early stage (1920s), accumulating long-standing revolutionary credentials.
+
+### 6.2 Discussion
+
+This study makes a novel contribution by employing newspaper co-occurrence data to analyze the social networks among Republican-era Chinese writers, advancing both the data resources and research methods used in the study of modern Chinese literary history. In addition, the findings offer valuable insights into the dynamics of social relationships among Republican-era writers, particularly regarding how the spread of leftist ideology shaped the structure of the writer social network.
+
+These findings not only enhance our understanding of the Republican-era literary community, but also provide new perspectives for interpreting Chinese political history, especially in relation to the critical question of why the Chinese Communist Party emerged victorious in the civil war. Furthermore, the discussion on political persecution introduces a novel social network-based perspective for understanding the political campaigns of the Mao era.
+
+### 6.3 Limitations
+
+First, this study includes only 28 major writers, and future research could expand the analysis by including a larger set of writers. In addition to the basic variables used in this study, more socio-economic attributes of writers could also be considered. Moreover, the network data used in this study are based on newspaper co-occurrence, but no formal validation was conducted. Future research could validate the social relationships among writers by drawing on additional sources such as biographies.
+
+Second, my coding of the writers’ leftist ideological orientation is based on my reading and interpretation of their Wikipedia biographies. Apart from a few objective criteria (such as CCP membership), this coding process involves a degree of subjectivity. To improve the objectivity of this research, future studies could adopt Text-As-Data methods to measure ideology by applying dictionary-based approaches or word scaling techniques to the writings of these authors across different historical periods.
+
+Finally, this study leaves several puzzling findings unexplained. For example, why are writers with Japanese educational experience less likely to connect with each other? In addition, this study finds no evidence of leftist ideology spreading through the social network, which seems counter-intuitive and is likely due to limitations in how the social network is defined in this study. Future research could address these questions by applying new types of network data.
